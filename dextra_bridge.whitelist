@@ -1,0 +1,17 @@
+### whitelist ####
+# call
+call: ^.*:AB
+#call: ^IU5:AB
+#call: ^I5:AB
+#call: ^Ik5:AB
+#call: ^Iw5:AB
+#call: ^Iz5:AB
+#call: ^Ia5:AB
+#call: ^iz0:AB
+
+# si bloccano tutti i via
+# in modo da gestire solo
+# i call
+via: ^[.*]:AB
+
+

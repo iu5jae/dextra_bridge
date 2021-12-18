@@ -1,0 +1,8 @@
+### blacklist ####
+# nessun call in blacklist
+call: ^[.*]: AB
+
+# nessun via in blacklist
+via: ^[.*]: AB
+
+

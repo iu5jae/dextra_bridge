@@ -1,0 +1,14 @@
+[Unit]
+Description=Dextra Bridge
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=30
+User=root
+ExecStart=/opt/dextra_bridge/dextra_bridge.py /opt/dextra_bridge/dextra_bridge.ini
+
+[Install]
+WantedBy=multi-user.target
