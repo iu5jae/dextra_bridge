@@ -30,10 +30,12 @@ import re
 import os
 import signal
 
-ver = '200615'
+ver = '220925'
 
 a_connesso = False
 b_connesso = False
+a_fault = False
+b_fault = False
 q_ab = queue.Queue() # coda pacchetti A -> B 
 q_ba = queue.Queue() # coda pacchetti B -> A 
 
@@ -302,7 +304,7 @@ def signal_handler(signal, frame):
  
 
 def conn (sock, lato):
-    global a_connesso, b_connesso
+    global a_connesso, b_connesso, a_fault, b_fault
     if (lato == 'A'):
       # print('conn: provo a connettere A') 
       logging.info('conn: provo a connettere A') 
@@ -328,6 +330,7 @@ def conn (sock, lato):
           logging.info('connesso A')
           lock_conn_a.acquire()
           a_connesso = True
+          a_fault = False
           lock_conn_a.release()
           lock_a.acquire()
           ack_time_a = 0
@@ -356,6 +359,7 @@ def conn (sock, lato):
           logging.info('connesso B')
           lock_conn_b.acquire()
           b_connesso = True
+          b_fault = False
           lock_conn_b.release()
           lock_b.acquire()
           ack_time_b = 0
@@ -552,25 +556,42 @@ def clock ():
 
 # controllo connessioni
 def check_conn():
-  global a_connesso, b_connesso  
+  global a_connesso, b_connesso, a_fault, b_fault  
   while True:
     # print('ack_time_a = ' + str(ack_time_a))
     # print('ack_time_b = ' + str(ack_time_b))
     if (ack_time_a > ack_tout):
-      # print('check_conn: Timeout - Connetto A')
-      logging.info('check_conn: Timeout - Connetto A')
       lock_conn_a.acquire()
       a_connesso = False
       lock_conn_a.release()
-      conn (sock_a, 'A')    
+      if not b_fault:
+        logging.info('check_conn: Timeout - Connetto A')
+        conn (sock_a, 'A')    
+        
+      if ((not b_fault) and (not a_fault) and (not a_connesso)):
+        a_fault = True
+        if b_connesso:
+          q_ab.put(str.encode(DISCONN_B))
+          b_connesso = False
+          logging.info('check_conn: Disconnetto B per Fault A')
+    time.sleep(ack_tout/4.0)  
+    
     if (ack_time_b > ack_tout):
-      # print('check_conn: Timeout - Connetto B')
-      logging.info('check_conn: Timeout - Connetto B')
       lock_conn_b.acquire()
       b_connesso = False
       lock_conn_b.release()
-      conn (sock_b, 'B')
-    time.sleep(ack_tout/2.0)
+      if not a_fault:
+        logging.info('check_conn: Timeout - Connetto B')
+        conn (sock_b, 'B')
+      
+      if ((not b_fault) and (not a_fault) and (not b_connesso)):
+        b_fault = True
+        if a_connesso:
+          q_ba.put(str.encode(DISCONN_A))
+          a_connesso = False
+          logging.info('check_conn: Disconnetto A per Fault B')
+
+    time.sleep(ack_tout/4.0)
 
 # invio pacchetti keepalive
 def keepalive():
